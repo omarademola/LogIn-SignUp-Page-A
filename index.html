@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Auth</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f5f0e8;
+      --panel:    #fffdf9;
+      --ink:      #1c1a17;
+      --muted:    #8a8578;
+      --accent:   #c8622a;
+      --border:   #e2ddd4;
+      --radius:   12px;
+      --trans:    0.25s ease;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--ink);
+    }
+
+    /* subtle grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Card ───────────────────────────────────── */
+    .card {
+      position: relative;
+      z-index: 1;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: min(420px, 92vw);
+      padding: 48px 44px 40px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.04), 0 12px 40px rgba(0,0,0,.06);
+      animation: rise .5s ease both;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+
+    /* ── Wordmark ───────────────────────────────── */
+    .wordmark {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.9rem;
+      font-weight: 600;
+      letter-spacing: -.5px;
+      color: var(--ink);
+      margin-bottom: 32px;
+    }
+    .wordmark span { color: var(--accent); }
+
+    /* ── Tab switcher ───────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 32px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 9px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: .875rem;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background var(--trans), color var(--trans), box-shadow var(--trans);
+    }
+
+    .tab.active {
+      background: var(--panel);
+      color: var(--ink);
+      box-shadow: 0 1px 4px rgba(0,0,0,.10);
+    }
+
+    /* ── Form ───────────────────────────────────── */
+    .form { display: none; flex-direction: column; gap: 18px; }
+    .form.active { display: flex; animation: fade .3s ease both; }
+
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+
+    label {
+      font-size: .75rem;
+      font-weight: 500;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input {
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      font-family: inherit;
+      font-size: .9375rem;
+      color: var(--ink);
+      outline: none;
+      transition: border-color var(--trans), box-shadow var(--trans);
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(200, 98, 42, .12);
+    }
+
+    input::placeholder { color: #c4bfb5; }
+
+    /* ── Submit button ──────────────────────────── */
+    .btn {
+      margin-top: 6px;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      background: var(--ink);
+      color: #fff;
+      font-family: inherit;
+      font-size: .9375rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background var(--trans), transform var(--trans);
+    }
+
+    .btn:hover  { background: #2e2b26; }
+    .btn:active { transform: scale(.98); }
+
+    /* ── Divider ────────────────────────────────── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: .8rem;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── OAuth button ───────────────────────────── */
+    .btn-ghost {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      font-family: inherit;
+      font-size: .9rem;
+      color: var(--ink);
+      cursor: pointer;
+      transition: background var(--trans);
+    }
+    .btn-ghost:hover { background: var(--bg); }
+
+    /* ── Footer link ────────────────────────────── */
+    .foot {
+      margin-top: 8px;
+      text-align: center;
+      font-size: .825rem;
+      color: var(--muted);
+    }
+    .foot a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .foot a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="wordmark">arc<span>.</span></div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-target="login">Log in</button>
+    <button class="tab"        role="tab" data-target="signup">Sign up</button>
+  </div>
+
+  <!-- Login -->
+  <form class="form active" id="login" novalidate>
+    <div class="field">
+      <label for="l-email">Email</label>
+      <input id="l-email" type="email" placeholder="you@example.com" required />
+    </div>
+    <div class="field">
+      <label for="l-pass">Password</label>
+      <input id="l-pass" type="password" placeholder="••••••••" required />
+    </div>
+    <button type="submit" class="btn">Continue</button>
+    <div class="divider">or</div>
+    <button type="button" class="btn-ghost">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <p class="foot">Forgot password? <a href="#">Reset it</a></p>
+  </form>
+
+  <!-- Sign up -->
+  <form class="form" id="signup" novalidate>
+    <div class="field">
+      <label for="s-name">Full name</label>
+      <input id="s-name" type="text" placeholder="Jane Smith" required />
+    </div>
+    <div class="field">
+      <label for="s-email">Email</label>
+      <input id="s-email" type="email" placeholder="you@example.com" required />
+    </div>
+    <div class="field">
+      <label for="s-pass">Password</label>
+      <input id="s-pass" type="password" placeholder="Min. 8 characters" required minlength="8"/>
+    </div>
+    <button type="submit" class="btn">Create account</button>
+    <div class="divider">or</div>
+    <button type="button" class="btn-ghost">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Sign up with Google
+    </button>
+    <p class="foot">By signing up you agree to our <a href="#">Terms</a></p>
+  </form>
+</div>
+
+<script>
+  // ── Tab switching ────────────────────────────────────────────
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab, .form').forEach(el => el.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.target).classList.add('active');
+    });
+  });
+
+  // ── Form submission (demo) ───────────────────────────────────
+  document.querySelectorAll('.form').forEach(form => {
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const btn = form.querySelector('.btn[type="submit"]');
+      btn.textContent = '✓ Done';
+      btn.style.background = '#2d7a4f';
+      setTimeout(() => {
+        btn.textContent = form.id === 'login' ? 'Continue' : 'Create account';
+        btn.style.background = '';
+      }, 2000);
+    });
+  });
+</script>
+
+</body>
+</html>
