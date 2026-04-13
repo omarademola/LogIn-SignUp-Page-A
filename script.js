@@ -1,18 +1,86 @@
 // ============================================
-// VALIDATION ENGINE & UTILITIES
+// CONFIGURATION & CONSTANTS
 // ============================================
+
+const CONFIG = {
+  ASYNC_TIMEOUT: 2000,
+  SUCCESS_COLOR: "#2d7a4f",
+  REMEMBER_EXPIRE_DAYS: 30,
+  STORAGE_PREFIX: "omabell",
+};
+
+// UTILITY CLASSES
+
+class DOMHelper {
+  static getField(input) {
+    return input.closest(".field");
+  }
+
+  static getFieldError(field) {
+    return field?.querySelector(".field-error");
+  }
+
+  static getFieldInput(field) {
+    return field?.querySelector("input");
+  }
+
+  static getFormInputs(form) {
+    return form.querySelectorAll("input[data-validate]");
+  }
+
+  static toggleFormInputs(form, disabled) {
+    this.getFormInputs(form).forEach((input) => {
+      input.disabled = disabled;
+    });
+  }
+}
+
+class StorageManager {
+  constructor(keyPrefix) {
+    this.keyPrefix = keyPrefix;
+  }
+
+  setItem(key, value, expirationDays = null) {
+    const fullKey = `${this.keyPrefix}_${key}`;
+    localStorage.setItem(fullKey, value);
+
+    if (expirationDays) {
+      const expires = new Date();
+      expires.setDate(expires.getDate() + expirationDays);
+      localStorage.setItem(`${fullKey}_expire`, expires.getTime());
+    }
+  }
+
+  getItem(key) {
+    const fullKey = `${this.keyPrefix}_${key}`;
+    const expireKey = `${fullKey}_expire`;
+    const expireTime = localStorage.getItem(expireKey);
+
+    if (expireTime && new Date().getTime() > parseInt(expireTime)) {
+      this.removeItem(key);
+      return null;
+    }
+
+    return localStorage.getItem(fullKey);
+  }
+
+  removeItem(key) {
+    const fullKey = `${this.keyPrefix}_${key}`;
+    localStorage.removeItem(fullKey);
+    localStorage.removeItem(`${fullKey}_expire`);
+  }
+}
+
+// VALIDATION ENGINE
 
 class ValidationEngine {
   constructor() {
     this.validators = {
-      email: (value) => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(value);
-      },
+      email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
       password: (value) => value.length >= 8,
       required: (value) => value.trim().length > 0,
-      match: (value, targetSelector) => {
-        const targetInput = document.querySelector(targetSelector);
+      match: (value, targetId) => {
+        const targetInput = document.getElementById(targetId);
         return value === targetInput?.value;
       },
       optional: () => true,
@@ -23,78 +91,48 @@ class ValidationEngine {
     const validationType = input.dataset.validate;
     if (!validationType) return true;
 
-    let isValid = true;
     const value = input.value;
 
     if (validationType === "match") {
-      const targetSelector = `#${input.dataset.matchTarget}`;
-      isValid = this.validators.match(value, targetSelector);
-    } else if (this.validators[validationType]) {
-      isValid = this.validators[validationType](value);
+      const targetId = input.dataset.matchTarget;
+      return this.validators.match(value, targetId);
     }
 
-    return isValid;
+    return this.validators[validationType]?.(value) ?? true;
   }
 
-  markFieldError(field, errorMessage) {
-    const errorEl = field.querySelector(".field-error");
-    if (errorEl) {
-      errorEl.textContent = errorMessage;
-      errorEl.setAttribute("role", "alert");
-    }
-    field.classList.add("error");
-    field.classList.remove("success");
+  setFieldState(field, state) {
+    const input = DOMHelper.getFieldInput(field);
+    const errorEl = DOMHelper.getFieldError(field);
 
-    const input = field.querySelector("input");
-    if (input) {
-      input.setAttribute("aria-invalid", "true");
-      if (errorEl?.id) {
-        input.setAttribute("aria-describedby", errorEl.id);
-      }
-    }
-  }
-
-  markFieldSuccess(field) {
-    const errorEl = field.querySelector(".field-error");
-    if (errorEl) {
-      errorEl.textContent = "";
-    }
-    field.classList.remove("error");
-    field.classList.add("success");
-
-    const input = field.querySelector("input");
-    if (input) {
-      input.setAttribute("aria-invalid", "false");
-    }
-  }
-
-  clearFieldState(field) {
-    const errorEl = field.querySelector(".field-error");
-    if (errorEl) {
-      errorEl.textContent = "";
-    }
     field.classList.remove("error", "success");
 
-    const input = field.querySelector("input");
-    if (input) {
-      input.setAttribute("aria-invalid", "false");
+    if (state === "error") {
+      field.classList.add("error");
+      input?.setAttribute("aria-invalid", "true");
+    } else if (state === "success") {
+      field.classList.add("success");
+      input?.setAttribute("aria-invalid", "false");
+    }
+
+    if (errorEl) {
+      errorEl.textContent =
+        typeof state === "object" ? state.message || "" : "";
     }
   }
 
   validateForm(form) {
     let isValid = true;
-    const inputs = form.querySelectorAll("input[data-validate]");
-
-    inputs.forEach((input) => {
-      const field = input.closest(".field");
+    DOMHelper.getFormInputs(form).forEach((input) => {
+      const field = DOMHelper.getField(input);
       if (!field) return;
 
       if (!this.validateField(input)) {
         const message = input.dataset.validateMessage || "Invalid input";
-        this.markFieldError(field, message);
+        this.setFieldState(field, { error: true, message });
         isValid = false;
       } else {
-        this.markFieldSuccess(field);
+        this.setFieldState(field, "success");
       }
     });
 
@@ -102,9 +140,7 @@ class ValidationEngine {
   }
 }
 
-// ============================================
-// PASSWORD STRENGTH INDICATOR
-// ============================================
+// PASSWORD STRENGTH
 
 class PasswordStrength {
   constructor() {
@@ -112,19 +148,20 @@ class PasswordStrength {
   }
 
   init() {
-    const passwordInputs = document.querySelectorAll(
-      'input[type="password"][id$="-pass"]',
-    );
-    passwordInputs.forEach((input) => {
-      const signupField = input.closest("#signup");
-      if (signupField && input.id === "s-pass") {
-        input.addEventListener("focus", () =>
-          this.showStrengthIndicator(input),
-        );
-        input.addEventListener("input", () => this.updateStrength(input));
-        input.addEventListener("blur", () => this.hideStrengthIndicator(input));
-      }
-    });
+    document
+      .querySelectorAll('input[type="password"][id$="-pass"]')
+      .forEach((input) => {
+        const inSignup = input.closest("#signup");
+        if (inSignup && input.id === "s-pass") {
+          input.addEventListener("focus", () =>
+            this.showStrengthIndicator(input),
+          );
+          input.addEventListener("input", () => this.updateStrength(input));
+          input.addEventListener("blur", () =>
+            this.hideStrengthIndicator(input),
+          );
+        }
+      });
   }
 
   calculateStrength(value) {
@@ -135,15 +172,12 @@ class PasswordStrength {
     const hasNumber = /\d/.test(value);
     const hasSpecial = /[!@#$%^&*]/.test(value);
 
-    const strengthScore = [
-      hasUpperCase,
-      hasLowerCase,
-      hasNumber,
-      hasSpecial,
-    ].filter(Boolean).length;
+    const score = [hasUpperCase, hasLowerCase, hasNumber, hasSpecial].filter(
+      Boolean,
+    ).length;
 
-    if (strengthScore <= 1) return { level: "weak", text: "Weak" };
-    if (strengthScore <= 2) return { level: "medium", text: "Medium" };
+    if (score <= 1) return { level: "weak", text: "Weak" };
+    if (score <= 2) return { level: "medium", text: "Medium" };
     return { level: "strong", text: "Strong" };
   }
 
@@ -155,9 +189,7 @@ class PasswordStrength {
       strengthEl.classList.remove("weak", "medium", "strong");
       strengthEl.classList.add(strength.level);
       const textEl = strengthEl.querySelector(".strength-text");
-      if (textEl) {
-        textEl.textContent = strength.text;
-      }
+      if (textEl) textEl.textContent = strength.text;
     }
   }
 
@@ -177,9 +209,7 @@ class PasswordStrength {
   }
 }
 
-// ============================================
-// PASSWORD TOGGLE (SHOW/HIDE)
-// ============================================
+// PASSWORD TOGGLE
 
 class PasswordToggle {
   constructor() {
@@ -187,40 +217,64 @@ class PasswordToggle {
   }
 
   init() {
-    const toggleButtons = document.querySelectorAll(".toggle-password");
-    toggleButtons.forEach((button) => {
+    // Handle explicit toggle buttons
+    document.querySelectorAll(".toggle-password").forEach((button) => {
       button.addEventListener("click", (e) => {
         e.preventDefault();
         this.toggle(button);
       });
     });
+
+    // Auto-create toggles for data-toggle-password inputs
+    document
+      .querySelectorAll("input[data-toggle-password]")
+      .forEach((input) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "password-wrapper";
+
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.appendChild(input);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "toggle-password";
+        button.setAttribute("aria-label", "Show password");
+        button.innerHTML = `
+        <svg class="eye-closed"><use href="#icon-eye-closed"/></svg>
+        <svg class="eye-open"><use href="#icon-eye-open"/></svg>
+      `;
+
+        wrapper.appendChild(button);
+        button.addEventListener("click", (e) => {
+          e.preventDefault();
+          this.toggle(button);
+        });
+      });
   }
 
   toggle(button) {
-    const targetId = button.dataset.target;
-    const input = document.getElementById(targetId);
+    const input =
+      button.closest(".password-wrapper")?.querySelector("input") ||
+      document.getElementById(button.dataset.target);
 
     if (!input) return;
 
-    const isPasswordType = input.type === "password";
-    input.type = isPasswordType ? "text" : "password";
+    const isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
 
-    button.classList.toggle("active", !isPasswordType);
+    button.classList.toggle("active", !isPassword);
     button.setAttribute(
       "aria-label",
-      isPasswordType ? "Hide password" : "Show password",
+      isPassword ? "Hide password" : "Show password",
     );
   }
 }
 
-// ============================================
-// REMEMBER ME FUNCTIONALITY
-// ============================================
+// REMEMBER ME
 
 class RememberMe {
   constructor() {
-    this.storageKey = "omabell_remember_me";
-    this.expireKey = "omabell_remember_expire";
+    this.storage = new StorageManager(CONFIG.STORAGE_PREFIX);
     this.init();
   }
 
@@ -237,49 +291,29 @@ class RememberMe {
     const rememberCheckbox = document.querySelector("#remember-me");
 
     if (rememberCheckbox?.checked && emailInput?.value) {
-      this.saveEmail(emailInput.value);
+      this.storage.setItem(
+        "email",
+        emailInput.value,
+        CONFIG.REMEMBER_EXPIRE_DAYS,
+      );
     } else {
-      this.clearEmail();
+      this.storage.removeItem("email");
     }
-  }
-
-  saveEmail(email) {
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 30);
-
-    localStorage.setItem(this.storageKey, email);
-    localStorage.setItem(this.expireKey, expires.getTime());
   }
 
   loadEmail() {
-    const stored = localStorage.getItem(this.storageKey);
-    const expireTime = localStorage.getItem(this.expireKey);
-
-    if (!stored || !expireTime) return;
-
-    if (new Date().getTime() > parseInt(expireTime)) {
-      this.clearEmail();
-      return;
-    }
-
+    const stored = this.storage.getItem("email");
     const emailInput = document.querySelector("#l-email");
     const rememberCheckbox = document.querySelector("#remember-me");
 
-    if (emailInput) emailInput.value = stored;
-    if (rememberCheckbox) rememberCheckbox.checked = true;
-  }
-
-  clearEmail() {
-    localStorage.removeItem(this.storageKey);
-    localStorage.removeItem(this.expireKey);
-    const rememberCheckbox = document.querySelector("#remember-me");
-    if (rememberCheckbox) rememberCheckbox.checked = false;
+    if (stored && emailInput) {
+      emailInput.value = stored;
+      if (rememberCheckbox) rememberCheckbox.checked = true;
+    }
   }
 }
 
-// ============================================
-// FORM SUBMISSION HANDLER
-// ============================================
+// FORM SUBMISSION
 
 class FormSubmissionHandler {
   constructor(validationEngine) {
@@ -288,8 +322,7 @@ class FormSubmissionHandler {
   }
 
   init() {
-    const forms = document.querySelectorAll("form");
-    forms.forEach((form) => {
+    document.querySelectorAll("form").forEach((form) => {
       form.addEventListener("submit", (e) => this.handleSubmit(e));
     });
   }
@@ -304,65 +337,43 @@ class FormSubmissionHandler {
 
     const button = form.querySelector('.btn[type="submit"]');
     if (button) {
-      this.setLoadingState(button);
-      this.simulateAsync(() => {
-        this.clearLoadingState(button);
+      this.setButtonLoading(button, true);
+      setTimeout(() => {
         this.showSuccessState(button);
-      });
+      }, CONFIG.ASYNC_TIMEOUT);
     }
   }
 
-  setLoadingState(button) {
-    button.classList.add("loading");
-    button.disabled = true;
-    const form = button.closest("form");
-    if (form) {
-      const inputs = form.querySelectorAll("input");
-      inputs.forEach((input) => {
-        input.disabled = true;
-      });
-    }
-  }
+  setButtonLoading(button, loading) {
+    button.classList.toggle("loading", loading);
+    button.disabled = loading;
 
-  clearLoadingState(button) {
-    button.classList.remove("loading");
-    button.disabled = false;
     const form = button.closest("form");
     if (form) {
-      const inputs = form.querySelectorAll("input");
-      inputs.forEach((input) => {
-        input.disabled = false;
-      });
+      DOMHelper.toggleFormInputs(form, loading);
     }
   }
 
   showSuccessState(button) {
     const originalText = button.dataset.originalText;
-    button.classList.add("loading");
-    button.innerHTML = "✓";
-    button.style.background = "#2d7a4f";
+    button.textContent = "✓";
+    button.style.background = CONFIG.SUCCESS_COLOR;
 
     setTimeout(() => {
+      button.textContent = originalText;
       button.classList.remove("loading");
-      button.innerHTML = `<span class="btn-text">${originalText}</span><span class="btn-spinner" style="display: none;"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg></span>`;
       button.style.background = "";
-    }, 2000);
-  }
-
-  simulateAsync(callback) {
-    setTimeout(() => {
-      if (callback) callback();
-    }, 2000);
+      this.setButtonLoading(button, false);
+    }, CONFIG.ASYNC_TIMEOUT);
   }
 }
 
-// ============================================
-// MODAL FUNCTIONALITY
-// ============================================
+// MODAL
 
 class Modal {
   constructor() {
     this.currentModal = null;
+    this.focusTrapListeners = new WeakMap();
     this.init();
   }
 
@@ -376,49 +387,45 @@ class Modal {
 
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && this.currentModal) {
-        this.closeCurrentModal();
+        this.close(this.currentModal.id);
       }
     });
   }
 
   open(modalId) {
     const modal = document.getElementById(modalId);
-    if (!modal) return;
+    if (!modal || this.currentModal?.id === modalId) return;
 
     modal.classList.add("active");
     this.currentModal = modal;
-    this.trapFocus(modal);
+    this.setupFocusTrap(modal);
 
     const firstInput = modal.querySelector("input");
-    if (firstInput) {
-      setTimeout(() => firstInput.focus(), 100);
-    }
+    if (firstInput) setTimeout(() => firstInput.focus(), 100);
   }
 
   close(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) {
-      modal.classList.remove("active");
-      if (this.currentModal === modal) {
-        this.currentModal = null;
-      }
+    if (!modal) return;
+
+    modal.classList.remove("active");
+    this.cleanupFocusTrap(modal);
+
+    if (this.currentModal?.id === modalId) {
+      this.currentModal = null;
     }
   }
 
-  closeCurrentModal() {
-    if (this.currentModal) {
-      this.close(this.currentModal.id);
-    }
-  }
+  setupFocusTrap(modal) {
+    if (this.focusTrapListeners.has(modal)) return;
 
-  trapFocus(modal) {
     const focusableElements = modal.querySelectorAll(
       "input, button, [tabindex]:not([tabindex='-1'])",
     );
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
 
-    modal.addEventListener("keydown", (e) => {
+    const listener = (e) => {
       if (e.key !== "Tab") return;
 
       if (e.shiftKey) {
@@ -432,17 +439,26 @@ class Modal {
           firstElement?.focus();
         }
       }
-    });
+    };
+
+    modal.addEventListener("keydown", listener);
+    this.focusTrapListeners.set(modal, listener);
+  }
+
+  cleanupFocusTrap(modal) {
+    const listener = this.focusTrapListeners.get(modal);
+    if (listener) {
+      modal.removeEventListener("keydown", listener);
+      this.focusTrapListeners.delete(modal);
+    }
   }
 }
 
-// ============================================
-// THEME TOGGLE (DARK MODE)
-// ============================================
+// THEME TOGGLE
 
 class ThemeToggle {
   constructor() {
-    this.themeKey = "omabell_theme";
+    this.storage = new StorageManager(CONFIG.STORAGE_PREFIX);
     this.init();
   }
 
@@ -451,32 +467,28 @@ class ThemeToggle {
     if (button) {
       button.addEventListener("click", () => this.toggle());
     }
-
-    // Load saved theme or use system preference
     this.loadTheme();
   }
 
   toggle() {
     const html = document.documentElement;
-    const currentTheme = html.getAttribute("data-theme");
-    const newTheme = currentTheme === "dark" ? "light" : "dark";
-
-    this.setTheme(newTheme);
+    const isDark = html.getAttribute("data-theme") === "dark";
+    this.setTheme(isDark ? "light" : "dark");
   }
 
   setTheme(theme) {
     const html = document.documentElement;
     if (theme === "dark") {
       html.setAttribute("data-theme", "dark");
-      localStorage.setItem(this.themeKey, "dark");
+      this.storage.setItem("theme", "dark");
     } else {
       html.removeAttribute("data-theme");
-      localStorage.removeItem(this.themeKey);
+      this.storage.removeItem("theme");
     }
   }
 
   loadTheme() {
-    const saved = localStorage.getItem(this.themeKey);
+    const saved = this.storage.getItem("theme");
 
     if (saved === "dark") {
       this.setTheme("dark");
@@ -489,9 +501,7 @@ class ThemeToggle {
   }
 }
 
-// ============================================
-// TAB SWITCHING
-// ============================================
+// TAB SWITCHER
 
 class TabSwitcher {
   constructor() {
@@ -499,8 +509,7 @@ class TabSwitcher {
   }
 
   init() {
-    const tabs = document.querySelectorAll(".tab");
-    tabs.forEach((tab) => {
+    document.querySelectorAll(".tab").forEach((tab) => {
       tab.addEventListener("click", () => this.switchTab(tab));
     });
   }
@@ -508,18 +517,18 @@ class TabSwitcher {
   switchTab(tab) {
     const targetId = tab.dataset.target;
 
-    // Update tab states
     document.querySelectorAll(".tab").forEach((t) => {
       t.classList.remove("active");
       t.setAttribute("aria-selected", "false");
     });
+
     tab.classList.add("active");
     tab.setAttribute("aria-selected", "true");
 
-    // Update form visibility
     document.querySelectorAll(".form").forEach((form) => {
       form.classList.remove("active");
     });
+
     const targetForm = document.getElementById(targetId);
     if (targetForm) {
       targetForm.classList.add("active");
@@ -527,42 +536,49 @@ class TabSwitcher {
   }
 }
 
-// ============================================
+// AUTO-GENERATE ERROR SPANS
+
+function initializeFieldErrors() {
+  document.querySelectorAll(".field").forEach((field) => {
+    const input = field.querySelector("input");
+    if (!input || field.querySelector(".field-error")) return;
+
+    const errorSpan = document.createElement("span");
+    errorSpan.className = "field-error";
+    errorSpan.setAttribute("role", "alert");
+    errorSpan.id = `${input.id}-error`;
+    field.appendChild(errorSpan);
+  });
+}
+
 // REAL-TIME VALIDATION
-// ============================================
 
 function initRealTimeValidation(validationEngine) {
-  const inputs = document.querySelectorAll("input[data-validate]");
-  inputs.forEach((input) => {
+  document.querySelectorAll("input[data-validate]").forEach((input) => {
     input.addEventListener("blur", () => {
-      const field = input.closest(".field");
+      const field = DOMHelper.getField(input);
       if (!field) return;
 
       if (!validationEngine.validateField(input)) {
         const message = input.dataset.validateMessage || "Invalid input";
-        validationEngine.markFieldError(field, message);
+        validationEngine.setFieldState(field, { error: true, message });
       } else {
-        validationEngine.markFieldSuccess(field);
+        validationEngine.setFieldState(field, "success");
       }
     });
 
-    // Re-validate on input if field is already in error state
     input.addEventListener("input", () => {
-      const field = input.closest(".field");
-      if (!field) return;
+      const field = DOMHelper.getField(input);
+      if (!field?.classList.contains("error")) return;
 
-      if (field.classList.contains("error")) {
-        if (validationEngine.validateField(input)) {
-          validationEngine.clearFieldState(field);
-        }
+      if (validationEngine.validateField(input)) {
+        validationEngine.setFieldState(field, "success");
       }
     });
   });
 }
 
-// ============================================
 // GLOBAL MODAL FUNCTIONS
-// ============================================
 
 let globalModal = null;
 
@@ -579,14 +595,13 @@ function closeModal(modalId) {
   }
 }
 
-// ============================================
 // INITIALIZATION
-// ============================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  initializeFieldErrors();
+
   const validationEngine = new ValidationEngine();
 
-  // Initialize all modules
   new TabSwitcher();
   new PasswordToggle();
   new PasswordStrength();
@@ -595,6 +610,5 @@ document.addEventListener("DOMContentLoaded", () => {
   new ThemeToggle();
   globalModal = new Modal();
 
-  // Initialize real-time validation
   initRealTimeValidation(validationEngine);
 });
