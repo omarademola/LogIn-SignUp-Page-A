@@ -12,13 +12,59 @@
   </head>
   <body>
     <div class="card">
-      <div class="wordmark">OMABELL<span>.</span></div>
+      <div class="card-header">
+        <div class="wordmark">OMABELL<span>.</span></div>
+        <button
+          class="theme-toggle"
+          aria-label="Toggle dark mode"
+          title="Toggle dark mode"
+        >
+          <svg
+            class="icon-sun"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg
+            class="icon-moon"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
 
       <div class="tabs" role="tablist">
-        <button class="tab active" role="tab" data-target="login">
+        <button
+          class="tab active"
+          role="tab"
+          data-target="login"
+          aria-selected="true"
+        >
           Log in
         </button>
-        <button class="tab" role="tab" data-target="signup">Sign up</button>
+        <button
+          class="tab"
+          role="tab"
+          data-target="signup"
+          aria-selected="false"
+        >
+          Sign up
+        </button>
       </div>
 
       <!-- Login -->
@@ -29,16 +75,82 @@
             id="l-email"
             type="email"
             placeholder="you@example.com"
+            data-validate="email"
+            data-validate-message="Valid email required"
+            aria-required="true"
             required
           />
+          <span class="field-error" role="alert" id="l-email-error"></span>
         </div>
-        <div class="field">
+        <div class="field password-field">
           <label for="l-pass">Password</label>
-          <input id="l-pass" type="password" placeholder="••••••••" required />
+          <div class="password-wrapper">
+            <input
+              id="l-pass"
+              type="password"
+              placeholder="••••••••"
+              data-validate="password"
+              data-validate-message="Min. 8 characters"
+              aria-required="true"
+              required
+            />
+            <button
+              type="button"
+              class="toggle-password"
+              data-target="l-pass"
+              aria-label="Show password"
+              title="Show password"
+            >
+              <svg
+                class="eye-closed"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg
+                class="eye-open"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                ></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <span class="field-error" role="alert" id="l-pass-error"></span>
         </div>
-        <button type="submit" class="btn">Continue</button>
+        <div class="field checkbox">
+          <input type="checkbox" id="remember-me" data-validate="optional" />
+          <label for="remember-me">Remember me</label>
+        </div>
+        <button type="submit" class="btn" data-original-text="Continue">
+          <span class="btn-text">Continue</span>
+          <span class="btn-spinner" style="display: none">
+            <svg
+              class="spinner"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+          </span>
+        </button>
         <div class="divider">or</div>
-        <button type="button" class="btn-ghost">
+        <button
+          type="button"
+          class="btn-ghost"
+          aria-label="Continue with Google"
+        >
           <svg width="18" height="18" viewBox="0 0 48 48">
             <path
               fill="#EA4335"
@@ -59,7 +171,17 @@
           </svg>
           Continue with Google
         </button>
-        <p class="foot">Forgot password? <a href="#">Reset here.</a></p>
+        <p class="foot">
+          Forgot password?
+          <a
+            href="#"
+            onclick="
+              openModal('reset-modal');
+              return false;
+            "
+            >Reset here.</a
+          >
+        </p>
       </form>
 
       <!-- Sign up -->
@@ -70,12 +192,24 @@
             id="s-name"
             type="text"
             placeholder="John Doe Smith"
+            data-validate="required"
+            data-validate-message="Full name required"
+            aria-required="true"
             required
           />
+          <span class="field-error" role="alert" id="s-name-error"></span>
         </div>
         <div class="field">
           <label for="s-dob">Date of Birth</label>
-          <input id="s-dob" type="date" required />
+          <input
+            id="s-dob"
+            type="date"
+            data-validate="required"
+            data-validate-message="Date of birth required"
+            aria-required="true"
+            required
+          />
+          <span class="field-error" role="alert" id="s-dob-error"></span>
         </div>
         <div class="field">
           <label for="s-email">Email</label>
@@ -83,22 +217,147 @@
             id="s-email"
             type="email"
             placeholder="you@example.com"
+            data-validate="email"
+            data-validate-message="Valid email required"
+            aria-required="true"
             required
           />
+          <span class="field-error" role="alert" id="s-email-error"></span>
         </div>
-        <div class="field">
+        <div class="field password-field">
           <label for="s-pass">Password</label>
-          <input
-            id="s-pass"
-            type="password"
-            placeholder="Min. 8 characters"
-            required
-            minlength="8"
-          />
+          <div class="password-wrapper">
+            <input
+              id="s-pass"
+              type="password"
+              placeholder="Min. 8 characters"
+              data-validate="password"
+              data-validate-message="Min. 8 characters"
+              aria-required="true"
+              required
+              minlength="8"
+            />
+            <button
+              type="button"
+              class="toggle-password"
+              data-target="s-pass"
+              aria-label="Show password"
+              title="Show password"
+            >
+              <svg
+                class="eye-closed"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg
+                class="eye-open"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                ></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="password-strength" id="s-pass-strength">
+            <div class="strength-bar">
+              <div class="strength-fill"></div>
+            </div>
+            <span class="strength-text"></span>
+          </div>
+          <span class="field-error" role="alert" id="s-pass-error"></span>
         </div>
-        <button type="submit" class="btn">Create account</button>
+        <div class="field password-field">
+          <label for="s-confirm-pass">Confirm Password</label>
+          <div class="password-wrapper">
+            <input
+              id="s-confirm-pass"
+              type="password"
+              placeholder="Confirm your password"
+              data-validate="match"
+              data-match-target="s-pass"
+              data-validate-message="Passwords must match"
+              aria-required="true"
+              required
+            />
+            <button
+              type="button"
+              class="toggle-password"
+              data-target="s-confirm-pass"
+              aria-label="Show password"
+              title="Show password"
+            >
+              <svg
+                class="eye-closed"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg
+                class="eye-open"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                ></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <span
+            class="field-error"
+            role="alert"
+            id="s-confirm-pass-error"
+          ></span>
+        </div>
+        <div class="field checkbox">
+          <input
+            type="checkbox"
+            id="terms"
+            data-validate="required"
+            data-validate-message="You must accept Terms & Conditions"
+            aria-required="true"
+            required
+          />
+          <label for="terms">I accept Terms & Conditions</label>
+          <span class="field-error" role="alert" id="terms-error"></span>
+        </div>
+        <button type="submit" class="btn" data-original-text="Create account">
+          <span class="btn-text">Create account</span>
+          <span class="btn-spinner" style="display: none">
+            <svg
+              class="spinner"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+          </span>
+        </button>
         <div class="divider">or</div>
-        <button type="button" class="btn-ghost">
+        <button
+          type="button"
+          class="btn-ghost"
+          aria-label="Sign up with Google"
+        >
           <svg width="18" height="18" viewBox="0 0 48 48">
             <path
               fill="#EA4335"
@@ -119,8 +378,75 @@
           </svg>
           Sign up with Google
         </button>
-        <p class="foot">By signing up you agree to our <a href="#">T&C</a></p>
       </form>
+    </div>
+
+    <!-- Password Reset Modal -->
+    <div
+      class="modal"
+      id="reset-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reset-title"
+    >
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="reset-title">Reset Password</h2>
+          <button
+            type="button"
+            class="modal-close"
+            aria-label="Close dialog"
+            onclick="closeModal('reset-modal')"
+          >
+            ×
+          </button>
+        </div>
+        <form id="reset-form" novalidate>
+          <div class="field">
+            <label for="reset-email">Email Address</label>
+            <input
+              id="reset-email"
+              type="email"
+              placeholder="you@example.com"
+              data-validate="email"
+              data-validate-message="Valid email required"
+              aria-required="true"
+              required
+            />
+            <span
+              class="field-error"
+              role="alert"
+              id="reset-email-error"
+            ></span>
+          </div>
+          <button
+            type="submit"
+            class="btn"
+            data-original-text="Send Reset Link"
+          >
+            <span class="btn-text">Send Reset Link</span>
+            <span class="btn-spinner" style="display: none">
+              <svg
+                class="spinner"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+              </svg>
+            </span>
+          </button>
+          <button
+            type="button"
+            class="btn-ghost"
+            onclick="closeModal('reset-modal')"
+          >
+            Cancel
+          </button>
+        </form>
+      </div>
     </div>
 
     <footer class="footer">
