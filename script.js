@@ -17,7 +17,7 @@ document.querySelectorAll(".form").forEach((form) => {
     btn.textContent = "✓ Done";
     btn.style.background = "#2d7a4f";
     setTimeout(() => {
-      btn.textContent = form.id === "login" ? "Continue" : "Create account";
+      btn.textContent = original;
       btn.style.background = "";
     }, 2000);
   });
